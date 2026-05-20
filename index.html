@@ -315,7 +315,7 @@
   <div>
     <p class="section-label">Layer</p>
     <div class="layer-group">
-      <button class="layer-btn active" onclick="setLayer('temp', this)">
+      <button class="layer-btn active" onclick="setLayer('lst', this)">
         <span class="layer-dot dot-temp"></span>
         Temperature anomaly (LST)
       </button>
@@ -339,8 +339,8 @@
 
   <div>
     <p class="section-label">Legend</p>
-    <div id="legend-temp">
-      <div class="legend-bar temp"></div>
+    <div id="legend-lst">
+      <div class="legend-bar lst"></div>
       <div class="legend-labels">
         <span>−4°C cooler</span>
         <span>avg</span>
@@ -414,8 +414,12 @@
 // Replace this function with real GEE tile URLs when connected.
 // Everything else (map, UI, controls) stays unchanged.
 function getLayerUrl(layer, year) {
-  // Example (inactive until GEE is connected):
-  // return `https://earthengine.googleapis.com/v1/projects/my-project/maps/map-id/tiles/{z}/{x}/{y}`;
+   if (layer === 'lst') {
+    return 'https://earthengine.googleapis.com/v1/projects/molten-unison-295212/maps/a680390b737aa45ff686360ecefe30c1-64eaa48f6feb99b8fd838f97aadb53a0/tiles/{z}/{x}/{y}';
+  }
+  if (layer === 'ndvi') {
+    return 'https://earthengine.googleapis.com/v1/projects/molten-unison-295212/maps/e7b534c4fc97bc0b0d1b3b2c0bc9d2eb-8442e86eebe379a3419736b5395e1216/tiles/{z}/{x}/{y}';
+  }
   return null;
 }
 
@@ -432,7 +436,7 @@ L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{
 }).addTo(map);
 
 // ── STATE ────────────────────────────────────────────────────────────────────
-let currentLayer = 'temp';
+let currentLayer = 'lst';
 let currentYear = 2024;
 let geeLayer = null;
 
@@ -441,7 +445,7 @@ function setLayer(layer, btn) {
   currentLayer = layer;
   document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('legend-temp').style.display = layer === 'temp' ? 'block' : 'none';
+  document.getElementById('legend-lst').style.display = layer === 'lst' ? 'block' : 'none';
   document.getElementById('legend-ndvi').style.display = layer === 'ndvi' ? 'block' : 'none';
   updateMap();
 }
@@ -467,7 +471,7 @@ map.on('click', function(e) {
   const lng = e.latlng.lng.toFixed(4);
   tooltip.style.display = 'block';
 
-  if (currentLayer === 'temp') {
+  if (currentLayer === 'lst') {
     const val = (Math.random() * 8 - 4).toFixed(1);
     document.getElementById('tip-label').textContent = lat + ', ' + lng;
     document.getElementById('tip-val').textContent = (val > 0 ? '+' : '') + val + '°C vs. avg';
