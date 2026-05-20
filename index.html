@@ -492,7 +492,12 @@ updateMap();
 fetch('barcelona_admin_wgs84.geojson')
   .then(r => r.json())
   .then(data => {
-    L.geoJSON(data, {
+    // only the outer border - TIPUS_UA = 'Municipi'
+    var cityOnly = {
+      ...data,
+      features: data.features.filter(f => f.properties.TIPUS_UA === 'Municipi')
+    };
+    L.geoJSON(cityOnly, {
       style: {
         color: '#c8f050',
         weight: 1.5,
@@ -500,7 +505,6 @@ fetch('barcelona_admin_wgs84.geojson')
       }
     }).addTo(map);
   });
-
 </script>
 </body>
 </html>
