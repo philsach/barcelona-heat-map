@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barcelona — Urban Heat & Green Cover</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f0c;
+      --surface: #171810;
+      --border: #2a2c22;
+      --text: #e8e6dc;
+      --muted: #7a7968;
+      --accent: #c8f050;
+      --hot: #ff4422;
+      --cool: #22aaff;
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: 320px 1fr;
+      grid-template-areas:
+        "header header"
+        "sidebar map"
+        "footer footer";
+      overflow: hidden;
+    }
+
+    header {
+      grid-area: header;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
+    }
+
+    header h1 {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    header h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    header .meta {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .data-badge {
+      margin-left: auto;
+      font-size: 10px;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    aside {
+      grid-area: sidebar;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .layer-group { display: flex; flex-direction: column; gap: 4px; }
+
+    .layer-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+
+    .layer-btn:hover { border-color: var(--muted); }
+    .layer-btn.active { border-color: var(--accent); background: rgba(200, 240, 80, 0.05); }
+
+    .layer-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-temp { background: linear-gradient(90deg, var(--cool), var(--hot)); }
+    .dot-ndvi { background: linear-gradient(90deg, #8B4513, #228B22); }
+    .dot-base { background: var(--muted); }
+
+    .year-display {
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 600;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    input[type=range] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .year-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 10px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .stat-value.hot { color: var(--hot); }
+    .stat-value.cool { color: var(--cool); }
+    .stat-value.green { color: var(--accent); }
+
+    .legend-bar {
+      height: 8px;
+      border-radius: 2px;
+      margin-bottom: 6px;
+    }
+
+    .legend-bar.temp {
+      background: linear-gradient(90deg, #0000CC, #6699FF, #FFFFFF, #FF6600, #CC0000);
+    }
+
+    .legend-bar.ndvi {
+      background: linear-gradient(90deg, #8B4513, #DEB887, #FFFFFF, #90EE90, #006400);
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .story {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 3px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .story strong { color: var(--text); font-weight: 500; }
+
+    #map {
+      grid-area: map;
+      width: 100%;
+      height: 100%;
+    }
+
+    .leaflet-container { background: var(--bg); }
+
+    footer {
+      grid-area: footer;
+      border-top: 1px solid var(--border);
+      padding: 8px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    .leaflet-control-zoom a {
+      background: var(--surface) !important;
+      color: var(--text) !important;
+      border-color: var(--border) !important;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(14,15,12,0.8) !important;
+      color: var(--muted) !important;
+    }
+
+    .leaflet-control-attribution a { color: var(--muted) !important; }
+
+    .info-tooltip {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--text);
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      min-width: 180px;
+    }
+
+    .info-tooltip .tip-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .info-tooltip .tip-val {
+      font-size: 20px;
+      font-weight: 500;
+    }
+
+    .coming-soon {
+      font-size: 11px;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 3px;
+      padding: 10px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .coming-soon span {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Barcelona — <em>Urban Heat & Green Cover</em></h1>
+  <span class="meta">Landsat 8/9 · 30m resolution · Summer 2024</span>
+  <span class="data-badge">Simulated Data</span>
+</header>
+
+<aside>
+
+  <div>
+    <p class="section-label">Layer</p>
+    <div class="layer-group">
+      <button class="layer-btn active" onclick="setLayer('temp', this)">
+        <span class="layer-dot dot-temp"></span>
+        Temperature anomaly (LST)
+      </button>
+      <button class="layer-btn" onclick="setLayer('ndvi', this)">
+        <span class="layer-dot dot-ndvi"></span>
+        Vegetation index (NDVI)
+      </button>
+      <button class="layer-btn" onclick="setLayer('base', this)">
+        <span class="layer-dot dot-base"></span>
+        Map only
+      </button>
+    </div>
+  </div>
+
+  <div>
+    <p class="section-label">Year</p>
+    <div class="year-display" id="year-display">2024</div>
+    <input type="range" min="2013" max="2024" value="2024" id="year-slider" oninput="setYear(this.value)">
+    <div class="year-labels"><span>2013</span><span>2024</span></div>
+  </div>
+
+  <div>
+    <p class="section-label">Legend</p>
+    <div id="legend-temp">
+      <div class="legend-bar temp"></div>
+      <div class="legend-labels">
+        <span>−4°C cooler</span>
+        <span>avg</span>
+        <span>+4°C hotter</span>
+      </div>
+    </div>
+    <div id="legend-ndvi" style="display:none;">
+      <div class="legend-bar ndvi"></div>
+      <div class="legend-labels">
+        <span>less green</span>
+        <span>avg</span>
+        <span>more green</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="section-label">City average — Summer 2024</p>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Avg. temperature</div>
+        <div class="stat-value hot" id="stat-temp">38.4°</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Avg. NDVI</div>
+        <div class="stat-value green" id="stat-ndvi">0.18</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Hottest point</div>
+        <div class="stat-value hot">+6.2°</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Coolest point</div>
+        <div class="stat-value cool">−5.8°</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="section-label">The story</p>
+    <div class="story">
+      <strong>More green, less heat.</strong> The Eixample — Barcelona's densest district — runs up to 6°C above the city average. Green corridors like <strong>Consell de Cent</strong> and parks measurably cool their surroundings.
+    </div>
+  </div>
+
+  <div>
+    <div class="coming-soon">
+      <span>Coming soon</span>
+      Real Landsat satellite data via Google Earth Engine will be connected here
+    </div>
+  </div>
+
+</aside>
+
+<div id="map"></div>
+
+<div class="info-tooltip" id="tooltip">
+  <div class="tip-label" id="tip-label">Temperature anomaly</div>
+  <div class="tip-val" id="tip-val">—</div>
+</div>
+
+<footer>
+  <span>Data: <a href="https://earthengine.google.com" target="_blank">Google Earth Engine</a> · Landsat 8/9 Collection 2</span>
+  <span>City boundaries: <a href="https://opendata-ajuntament.barcelona.cat" target="_blank">Open Data BCN</a></span>
+  <span style="margin-left:auto;">Philippsach · 2024</span>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── DATA LAYER ───────────────────────────────────────────────────────────────
+// Replace this function with real GEE tile URLs when connected.
+// Everything else (map, UI, controls) stays unchanged.
+function getLayerUrl(layer, year) {
+  // Example (inactive until GEE is connected):
+  // return `https://earthengine.googleapis.com/v1/projects/my-project/maps/map-id/tiles/{z}/{x}/{y}`;
+  return null;
+}
+
+// ── MAP INIT ─────────────────────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [41.39, 2.154],
+  zoom: 12,
+  zoomControl: true,
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  maxZoom: 18
+}).addTo(map);
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let currentLayer = 'temp';
+let currentYear = 2024;
+let geeLayer = null;
+
+// ── CONTROLS ─────────────────────────────────────────────────────────────────
+function setLayer(layer, btn) {
+  currentLayer = layer;
+  document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('legend-temp').style.display = layer === 'temp' ? 'block' : 'none';
+  document.getElementById('legend-ndvi').style.display = layer === 'ndvi' ? 'block' : 'none';
+  updateMap();
+}
+
+function setYear(year) {
+  currentYear = parseInt(year);
+  document.getElementById('year-display').textContent = year;
+  updateMap();
+}
+
+function updateMap() {
+  if (geeLayer) { map.removeLayer(geeLayer); geeLayer = null; }
+  const url = getLayerUrl(currentLayer, currentYear);
+  if (url) {
+    geeLayer = L.tileLayer(url, { opacity: 0.8, maxZoom: 16 }).addTo(map);
+  }
+}
+
+// ── MAP CLICK ────────────────────────────────────────────────────────────────
+map.on('click', function(e) {
+  const tooltip = document.getElementById('tooltip');
+  const lat = e.latlng.lat.toFixed(4);
+  const lng = e.latlng.lng.toFixed(4);
+  tooltip.style.display = 'block';
+
+  if (currentLayer === 'temp') {
+    const val = (Math.random() * 8 - 4).toFixed(1);
+    document.getElementById('tip-label').textContent = lat + ', ' + lng;
+    document.getElementById('tip-val').textContent = (val > 0 ? '+' : '') + val + '°C vs. avg';
+    document.getElementById('tip-val').style.color = val > 0 ? 'var(--hot)' : 'var(--cool)';
+  } else if (currentLayer === 'ndvi') {
+    const val = (Math.random() * 0.3 - 0.15).toFixed(3);
+    document.getElementById('tip-label').textContent = lat + ', ' + lng;
+    document.getElementById('tip-val').textContent = (val > 0 ? '+' : '') + val + ' NDVI';
+    document.getElementById('tip-val').style.color = val > 0 ? '#90EE90' : '#DEB887';
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+
+map.on('dblclick', function() {
+  document.getElementById('tooltip').style.display = 'none';
+});
+
+updateMap();
+</script>
+</body>
+</html>
