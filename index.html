@@ -495,7 +495,7 @@ fetch('barcelona_admin_wgs84.geojson')
     // only the outer border - TIPUS_UA = 'Municipi'
     var cityOnly = {
       ...data,
-      features: data.features.filter(f => f.properties.TIPUS_UA === 'Municipi')
+      features: data.features.filter(f => f.properties.TIPUS_UA === 'TERME')
     };
     L.geoJSON(cityOnly, {
       style: {
