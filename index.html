@@ -189,7 +189,7 @@
       margin-bottom: 6px;
     }
 
-    .legend-bar.temp {
+    .legend-bar.lst {
       background: linear-gradient(90deg, #0000CC, #6699FF, #FFFFFF, #FF6600, #CC0000);
     }
 
@@ -496,7 +496,7 @@ updateMap();
 fetch('barcelona_admin_wgs84.geojson')
   .then(r => r.json())
   .then(data => {
-    // only the outer border - TIPUS_UA = 'Municipi'
+    // only the outer border - TIPUS_UA = 'TERME'
     var cityOnly = {
       ...data,
       features: data.features.filter(f => f.properties.TIPUS_UA === 'TERME')
